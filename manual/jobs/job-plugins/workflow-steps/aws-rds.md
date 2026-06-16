@@ -1,0 +1,98 @@
+---
+title: "AWS RDS Workflow Steps"
+source_url: https://docs.rundeck.com/docs/manual/jobs/job-plugins/workflow-steps/aws-rds.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# AWS RDS Workflow Steps
+
+> **Available in PagerDuty Runbook Automation Commercial products.**
+
+Amazon Relational Database Service (RDS) is a collection of managed services that makes it simple to set up, operate, and scale databases in the cloud.
+
+The following RDS plugins are available for PagerDuty Runbook Automation:
+
+- [**RDS Instance Status** (AWS / RDS / Status)](#rds-instance-status)
+- [**Start RDS Instance** (AWS / RDS / Cluster / Start)](#start-rds-cluster)
+- [**Stop RDS Instance** (AWS / RDS / Cluster / Stop)](#stop-rds-cluster)
+- [**Capture RDS Instance Snapshot** (AWS / RDS / Instance / Capture / Snapshot)](#capture-rds-instance-snapshot)
+- [**Start RDS Instance** (AWS / RDS / Instance / Start)](#start-rds-instance)
+- [**Stop RDS Instance** (AWS / RDS / Instance / Stop)](#stop-rds-instance)
+
+### Authentication
+
+Follow the instructions outlined in the [AWS Plugins Overview](https://docs.rundeck.com/docs/manual/plugins/aws-plugins-overview.html) for Runbook Automation to authenticate with AWS.
+
+When defining the IAM Role for Runbook Automation, be sure to include the following permissions in the Policy associated with the role:
+
+- **`rds:describeDBInstances`**
+
+### RDS Instance Status
+
+The **AWS / RDS / Status** plugin checks on the status of an existing RDS database instance:
+
+![RDS Plugin Output](https://docs.rundeck.com/docs/assets/img/aws-rds-status-output.png)  
+
+This can be especially useful when your RDS instance has run out of storage capacity, or when there are other issues with the instance availability.
+
+#### Plugin Field Descriptions
+
+- **Target RDS Instance**: The RDS database instance name. In AWS, this is the **DB identifier**.
+- **Target RDS Region**: The AWS region where the RDS instance resides.
+
+#### See it in Action
+
+This plugin is used in one of the prebuilt Jobs in our [***Automated Diagnostics Solution***](https://docs.rundeck.com/docs/learning/solutions/automated-diagnostics/). Try out the Solution to see how this plugin can be used as part of incident-response workflows.
+
+### Start RDS Cluster
+
+The **AWS / RDS / Start** plugin starts an existing RDS database instance.
+
+![RDS Start Plugin Output](https://docs.rundeck.com/docs/assets/img/rds-start-cluster.png)  
+
+#### Plugin Field Descriptions
+
+- **Cluster Name**: The RDS database cluster name. In AWS, this is the **DB identifier**.
+- **Region**: The AWS region where the RDS cluster resides.
+
+### Stop RDS Cluster
+
+The **AWS / RDS / Stop** plugin stops an existing RDS database cluster.
+
+![RDS Stop Cluster](https://docs.rundeck.com/docs/assets/img/rds-stop-cluster.png)  
+
+#### Plugin Field Descriptions
+
+- **Cluster Name**: The RDS database cluster name. In AWS, this is the **DB identifier**.
+- **Region**: The AWS region where the RDS cluster resides.
+
+### Capture RDS Instance Snapshot
+
+The **AWS / RDS / Instance / Capture / Snapshot** plugin captures a snapshot of an existing RDS database instance.
+
+![RDS Snapshot Plugin Output](https://docs.rundeck.com/docs/assets/img/rds-capture-snapshot.png)  
+
+#### Plugin Field Descriptions
+
+- **Instance Name**: The RDS database instance name. In AWS, this is the **DB identifier**.
+- **Snapshot Name**: The name of the snapshot to be created.
+
+### Start RDS Instance
+
+The **AWS / RDS / Instance / Start** plugin starts an existing RDS database instance.
+
+#### Plugin Field Descriptions
+
+- **Instance Name**: The RDS database instance name. In AWS, this is the **DB identifier**.
+- **Region**: The AWS region where the RDS instance resides.
+
+### Stop RDS Instance
+
+The **AWS / RDS / Instance / Stop** plugin stops an existing RDS database instance.
+
+#### Plugin Field Descriptions
+
+- **Instance Name**: The RDS database instance name. In AWS, this is the **DB identifier**.
+- **Region**: The AWS region where the RDS instance resides.

@@ -1,0 +1,336 @@
+---
+title: "Tuning Rundeck"
+source_url: https://docs.rundeck.com/docs/administration/maintenance/tuning-rundeck.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Tuning Rundeck
+
+### File descriptors
+
+The Rundeck server process opens a number of files during normal operation. These include system and java libraries, logs, and sockets. Your system restricts the number of open file handles per process but these limitations can be adjusted.
+
+If your installation attempts to exceed the limit, you will see an error like the one shown below in your [service.log](https://docs.rundeck.com/docs/administration/maintenance/logs.html) file.
+
+    Too many open files
+
+*On Linux nodes*
+
+List the current limit with the [ulimit](https://ss64.com/bash/ulimit.html) command:
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+ulimit -n
+```
+
+</div>
+
+If the limit is low (eg `1024`) it should be raised.
+
+You can get the current number of open file descriptors used by the Rundeck server process with [lsof](https://linux.die.net/man/8/lsof):
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+lsof -p <rundeck pid> | wc -l
+```
+
+</div>
+
+Increase the limit for a wide margin. Edit [/etc/security/limits.conf](https://ss64.com/bash/limits.conf.html) file to raise the hard and soft limits. Here they are raised to `65535` for the "rundeck" system account:
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+rundeck hard nofile 65535
+rundeck soft nofile 65535
+```
+
+</div>
+
+The system file descriptor limit is set in /proc/sys/fs/file-max. The following command will increase the limit to 65535:
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+echo 65535 > /proc/sys/fs/file-max
+```
+
+</div>
+
+In a new shell, run the ulimit command to set the new level:
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+ulimit -n 65535
+```
+
+</div>
+
+The ulimit setting can be set in the [rundeckd](https://docs.rundeck.com/docs/administration/maintenance/startup.html#launcher) startup script, or [profile](https://docs.rundeck.com/docs/administration/configuration/config-file-reference.html#profile).
+
+Restart Rundeck.
+
+### Java heap size
+
+The `rundeckd` startup script sets initial and maximum heap sizes for the server process. For many installations it will be sufficient.
+
+If the Rundeck JVM runs out of memory, the following error occurs:
+
+    Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+
+Heap size is governed by the following startup parameters: `-Xms<initial heap size>` and `-Xmx<maximum heap size>`
+
+You can increase these by updating the Rundeck [profile](https://docs.rundeck.com/docs/administration/configuration/config-file-reference.html#profile). To see the current values, grep the `profile` for the Xmx and Xms patterns:
+
+**Launcher installs:**
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+egrep '(Xmx|Xms)' $RDECK_BASE/etc/profile
+```
+
+</div>
+
+**RPM and DEB installs:**
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+egrep '(Xmx|Xms)' /etc/rundeck/profile
+```
+
+</div>
+
+The default settings initialized by the installer sets these to 1024 megabytes maximum and 256 megabytes initial.
+
+*Sizing advice*
+
+Several factors drive memory usage in Rundeck:
+
+- User sessions
+- Concurrent threads
+- Concurrent jobs
+- Number of managed nodes
+
+For example, if your installation has dozens of active users that manage a large environment (1000+ nodes), and has sufficient system memory, the following sizings might be more suitable:
+
+In the **Launcher Install** you can edit the `$RDECK_BASE/etc/profile` file.
+
+In **RPM** create/edit `/etc/sysconfig/rundeckd` and add below line.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+RDECK_JVM_SETTINGS="$RDECK_JVM_SETTINGS -Xmx4096m -Xms1024m"
+```
+
+</div>
+
+In **DEB** create/edit `/etc/default/rundeckd` and add below line.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+RDECK_JVM_SETTINGS="$RDECK_JVM_SETTINGS -Xmx4096m -Xms1024m"
+```
+
+</div>
+
+### Quartz job threadCount
+
+The maximum number of threads used by Rundeck for concurrent jobs by default is set to `10`.
+
+You can change this value, by updating the `rundeck-config.properties` file.
+
+Please refer to the Quartz site for detailed information: [Quartz - Configure ThreadPool Settings](http://www.quartz-scheduler.org/documentation/2.3.1-SNAPSHOT/configuration.html#configuration-of-threadpool-tune-resources-for-job-execution).
+
+#### Update rundeck-config
+
+Use the properties mentioned in the Quartz documentation, but **replace** the `org.quartz` prefix, with the prefix `quartz`.
+
+e.g. in `rundeck-config.properties` :
+
+<div class="language-properties line-numbers-mode">
+
+``` properties
+quartz.threadPool.threadCount = 20
+```
+
+</div>
+
+Set the threadCount value to the max number of threads you want to run concurrently.
+
+### Memory and Threads Example
+
+As an example, an environment which has 200 scheduled jobs that will trigger all at the same time, while using a threadPool size of 50.
+
+When these jobs are triggered, only 50 will run (sometimes less due to Rundeck using some threads for a temporary background process at that specific time). The other 150 jobs are queued, waiting for more threads to be released so more jobs can be triggered. So jobs will trigger at a delayed time but will trigger. This delay always depends on how much time the active jobs take to finish and free up the next thread.
+
+The relation between the Java heap size allocated and threadPool size is, the more threads you set, the more memory size will be needed.
+
+It is recommended to start from low numbers like 50, 100, 200, etc. (50 is a good number to start at) These settings will depend on how much workload/jobs/memory the server will need to handle within it's environment.
+
+This threads size does not affect only to scheduled jobs but ad-hoc commands, manually triggered jobs, and health-checks.
+
+### Database connection pool
+
+> **Tips**
+>
+> These settings can only be set on Runbook Automation Self Hosted versions
+
+**Available in Rundeck 5.16.0+**
+
+Rundeck uses Tomcat JDBC for database connection pooling with default settings that work well for most installations. You typically only need to adjust these settings if you experience:
+
+- Connection pool exhaustion errors in logs
+- Database timeout or "waiting for connection" errors
+- Performance degradation under high concurrent job execution (50+ simultaneous jobs)
+- Slow job startup times during peak load
+
+#### When to tune connection pool settings
+
+The default pool size of 100 connections (maxActive) is sufficient for most installations, including:
+
+- Small to large installations (up to several hundred concurrent jobs)
+- Development, testing, and production environments
+- Most typical usage patterns
+
+Consider tuning if you have:
+
+- Very high concurrent job execution (200+ jobs running simultaneously)
+- Very large Rundeck clusters with many active users
+- Jobs that hold database connections for extended periods
+- Database monitoring showing connection wait times or pool exhaustion
+- Your database server has connection limits that require reducing maxActive
+
+#### Configuration properties
+
+Add these properties to `rundeck-config.properties` to adjust your connection pool:
+
+<div class="language-properties line-numbers-mode">
+
+``` properties
+# Maximum number of active connections in the pool (default: 100)
+dataSource.properties.maxActive=50
+
+# Initial number of connections created when pool starts (default: 10)
+dataSource.properties.initialSize=10
+
+# Minimum number of idle connections maintained in the pool (default: 10)
+dataSource.properties.minIdle=10
+
+# Maximum number of idle connections in the pool (default: 100)
+dataSource.properties.maxIdle=25
+
+# Maximum wait time for connection in milliseconds (default: 30000)
+dataSource.properties.maxWait=30000
+
+# Maximum lifetime of a connection in milliseconds (default: no limit)
+dataSource.properties.maxAge=1800000
+
+# Validation query to test connections (recommended for production)
+dataSource.properties.validationQuery=SELECT 1
+
+# Test connections before borrowing from pool (default: false)
+dataSource.properties.testOnBorrow=true
+
+# Test idle connections periodically (default: false)
+dataSource.properties.testWhileIdle=true
+
+# Interval between idle connection validation runs in milliseconds (default: 5000)
+dataSource.properties.timeBetweenEvictionRunsMillis=5000
+
+# Minimum time a connection must be idle before eviction in milliseconds (default: 60000)
+dataSource.properties.minEvictableIdleTimeMillis=60000
+```
+
+</div>
+
+#### Sizing guidance
+
+**Start conservatively:** Begin with small increases (e.g., 20-30 connections) and monitor performance.
+
+**Formula for sizing:**  
+`maxActive â‰ˆ (expected concurrent jobs Ã— 2) + 10`
+
+**Examples:**
+
+- 50 concurrent jobs â†’ set maxActive to 110
+- 100 concurrent jobs â†’ set maxActive to 210
+- 200 concurrent jobs â†’ set maxActive to 410
+
+**Memory consideration:** Each database connection consumes memory. Monitor your JVM heap usage when increasing pool size and adjust the [Java heap size](#java-heap-size) accordingly if needed.
+
+**Database limits:** Ensure your database server is configured to handle the total number of connections from all Rundeck instances in your cluster.
+
+For complete Tomcat JDBC pool configuration options, see the [Tomcat JDBC documentation](https://tomcat.apache.org/tomcat-9.0-doc/jdbc-pool.html).
+
+### JMX instrumentation
+
+You may wish to monitor the internal operation of your Rundeck server via JMX.
+
+JMX provides introspection on the JVM, the application server, and classes all through a consistent interface. These various components are exposed to the management console via JMX managed beans - MBeans for short.
+
+*Note*: For more background information on JMX, see "[Java theory and practice: Instrumenting applications with JMX.](https://www.ibm.com/developerworks/library/j-jtp09196/)".
+
+Enable local JMX monitoring by adding the `com.sun.management.jmxremote` flag to the startup parameters in the [profile](https://docs.rundeck.com/docs/administration/configuration/config-file-reference.html#profile) for **Launcher Install**.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+export RDECK_JVM="$RDECK_JVM -Dcom.sun.management.jmxremote"
+```
+
+</div>
+
+For **RPM** create/edit `/etc/sysconfig/rundeckd` and add below line.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+RDECK_JVM_SETTINGS="$RDECK_JVM_SETTINGS -Dcom.sun.management.jmxremote"
+```
+
+</div>
+
+For **DEB** create/edit `/etc/default/rundeckd` and add below line.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+RDECK_JVM_SETTINGS="$RDECK_JVM_SETTINGS -Dcom.sun.management.jmxremote"
+```
+
+</div>
+
+You use a JMX client to monitor JMX agents. This can be a desktop GUI like JConsole run locally.
+
+    jconsole <rundeck pid>
+
+For instructions on remote JMX monitoring for Grails, Spring and log4j see: [Grails in the enterprise](https://public.dhe.ibm.com/software/dw/java/j-grails12168-pdf.pdf).
+
+### Node execution
+
+If you are executing commands across many hundreds or thousands of hosts, the bundled SSH node executor may not meet your performance requirements. Each SSH connection uses multiple threads and the encryption/decryption of messages uses CPU cycles and memory. Depending on your environment, you might choose another Node executor like MCollective, Salt or something similar. This essentially delegates remote execution to another tool designed for asynchronous fan out and thus relieving Rundeck of managing remote task execution.
+
+### Built in SSH plugins
+
+If you are interested in using the built in [SSH plugins](https://docs.rundeck.com/docs/manual/projects/node-execution/ssh.html), here are some details about how it performs when executing commands across very large numbers of nodes. For these tests, Rundeck was running on an 8 core, 32GB RAM m2.4xlarge AWS EC2 instance.
+
+We chose the `rpm -q` command which checks against the rpm database to see if a particular package was installed. For 1000 nodes we saw an average execution of 52 seconds. A 4000 node cluster took roughly 3.5 minutes, and 8000 node cluster about 7 minutes.
+
+The main limitation appears to be memory of the JVM instance relative to the number of concurrent requests. We tuned the max memory to be 12GB with a 1000 Concurrent Dispatch Threads to 1GB of Memory. GC appears to behave well during the runs given the "bursty" nature of them.
+
+### SSL and HTTPS performance
+
+It is possible to offload SSL connection processing by using an SSL termination proxy. This can be accomplished by setting up Apache httpd or [Nginx](https://en.wikipedia.org/wiki/Nginx) as a frontend to your Rundeck instances.
+
+### Resource provider
+
+Rundeck projects obtain information about nodes via a [resource provider](https://docs.rundeck.com/docs/manual/projects/resource-model-sources/). If your resource provider is a long blocking process (due to slow responses from a backend service), it can slow down or even hang up Rundeck. Be sure to make your resource provider work asynchronously. Also, consider using caching when possible.

@@ -1,0 +1,41 @@
+---
+title: "Create a Runner to connect to remote nodes"
+source_url: https://docs.rundeck.com/docs/learning/getting-started/rba/runner-setup.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Create a Runner to connect to remote nodes
+
+[Runners](https://docs.rundeck.com/docs/administration/runner/) are a recent addition to the PagerDuty Runbook Automation and Runbook Automation architecture. They are primarily used to automate tasks in secure, remote environments where direct access to infrastructure and services is restricted. This is accomplished by using a "reverse proxy" architecture. Runners regularly query (outbound only) the Runbook Automation instance for tasks. Runners are assigned to specific projects, and then [jobs](https://docs.rundeck.com/docs/learning/getting-started/jobs/what-is-a-job.html) within those projects can be sent to the Runner to execute in the remote environment.  
+![Runner diagram](https://docs.rundeck.com/docs/assets/img/running1.png)  
+*Example showing Runner architecture (Each remote Runner could be multiple Runners)*  
+  
+When Runners are enabled for a job, the execution of Job steps will be delegated to a specific Runner for management. This model offers resiliency as multiple Runners could be enabled for a particular Project so that each Job can be assigned to a specific Runner during high usage windows.  
+The first step in using Runners is to create one in the Runbook Automation interface.
+
+## Create a Runner
+
+1.  Click the gear in the top right corner of the screen and select **Runner Management** from the menu  
+    ![Select Runner management](https://docs.rundeck.com/docs/assets/img/running2.png)
+2.  Click the blue **Create Runner** button  
+    ![Click Create Runner](https://docs.rundeck.com/docs/assets/img/running3.png)
+3.  Enter in details for the new Runner  
+    Ensure that you are using a clear and concise name for the Runner. It is also necessary to provide at least one tag for the Runner in order to later associate it with jobs and nodes.  
+    ![Runner details](https://docs.rundeck.com/docs/assets/img/running4.png)  
+    After entering in Runner details, click the green **Next** button in the bottom right
+4.  Associate Runner with Project(s)  
+    Find the Welcome project (by searching if necessary and select the **Assigned** button and then click **Next**  
+    ![Associate with projects](https://docs.rundeck.com/docs/assets/img/running5.png)
+
+## Install Runner software
+
+1.  Download Runner package  
+    ![Download Runner](https://docs.rundeck.com/docs/assets/img/running6.png)
+2.  Install Runner package on a server in remote network  
+    Follow the [documented instructions](https://docs.rundeck.com/docs/administration/runner/runner-installation/runner-install.html) to install the Runner software on a machine that will act as Runner in the network segment where nodes will be targeted.
+3.  Verify that new Runner is connecting to Runbook Automation  
+    From the Runner Management area, there should be a green check mark if a Runner is successfully connecting back to Runbook Automation.  
+    ![Check Runner Status](https://docs.rundeck.com/docs/assets/img/running7.png)  
+    Next Step: [Add and connect to a node through your Runner](https://docs.rundeck.com/docs/learning/getting-started/rba/node-setup.html)

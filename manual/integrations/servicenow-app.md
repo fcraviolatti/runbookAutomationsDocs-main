@@ -1,0 +1,146 @@
+---
+title: "PagerDuty Runbook Automation - ServiceNow Application"
+source_url: https://docs.rundeck.com/docs/manual/integrations/servicenow-app.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# PagerDuty Runbook Automation - ServiceNow Application
+
+> **Available in PagerDuty Runbook Automation Commercial products.**
+
+> **Warning**
+>
+> Recently our Application was migrated and reimplemented in a new PagerDuty Runbook Automation version of the application. The functionality from the previous 1.x version of the Rundeck Automation application is the same. All future enhancements will happen on the new application located [here](https://store.servicenow.com/sn_appstore_store.do#!/store/application/1f1cf27adb252110e8744a6c139619f8/).
+
+Our ServiceNowÂ® application can be found on the ServiceNowÂ® Store. The application is free to Enterprise customers. To request the application please contact your Account Executive or Customer Success contact.
+
+## Requirements
+
+The application is currently supported on Vancouver, Washington DC, Xanadu.
+
+An active commercial license for a currently supported version is also required. ([See Release Calendar for current supported versions](https://docs.rundeck.com/docs/history/release-calendar.html))
+
+If you are integrating ServiceNowÂ® to Runbook Automation Self-Hosted, network ingress traffic must be allowed from the ServiceNowÂ® instance(s) to the PagerDuty Automation load balancer or server.
+
+## Requesting the application
+
+1.  [Visit the PagerDuty Application ServiceNow Store page](https://store.servicenow.com/sn_appstore_store.do#!/store/application/1f1cf27adb252110e8744a6c139619f8/).
+2.  Login and click the **Request App** button.
+3.  A message will be sent to our team for approval. Once approved a Customer Success or Support tech will contact with more details.
+
+## Configuration Steps
+
+After the app has been installed in your ServiceNowÂ® instance there will be a new "PagerDuty Automation" Module Group.
+
+> Note: The ServiceNow login account will need the `admin` role and `x_pd_process_autom.app_user` roles to configure these settings.
+
+1.  Create either a [User API Key](https://docs.rundeck.com/docs/manual/10-user.html#user-api-tokens) or a [Static API Token](https://docs.rundeck.com/docs/administration/configuration/config-file-reference.html#static-authentication-tokens-for-api-access)
+    - The minimum required permissions for the token are:
+      - Read all or specific projects
+      - Read all or specific webhooks in the projects necessary
+      - The application sending will need to be able to POST to the webhook endpoints as well. There is not an ACL for this, but ensure that firewalls, etc. allow access.
+      - Example ACL: (Note: This assumes a group called `sn_app_integration` is created with the rights for the account holding the integration API key.)
+
+      <div class="language-text line-numbers-mode">
+
+      ``` text
+      ---
+      description: Allow servicenow to list projects
+      context:
+        application: 'rundeck'
+      for:
+        project:
+          - allow: [read]
+      by:
+        group: sn_app_integration
+      ---
+      description: Allow servicenow to list and post for all projects webhooks
+      context:
+        project: ".*"
+      for:
+        resource:
+          - equals:
+              kind: webhook
+            allow: [read,post]
+      by:
+        group: sn_app_integration
+      ```
+
+      </div>
+2.  Click **Configure Rundeck Connection** and fill out the fields on the form with your environment details.
+    - **Protocol**: Choose if your Rundeck instance is running over `http` or `https`.
+    - **Destination**: Enter the IP address or domain name where your Rundeck is running.
+    - **Port Number**: Confirm the port number Rundeck is running on
+    - **API Key**: Paste in the API Key from Step 1
+    - **API Version**: In rare occurrences the API version can be adjusted. Default and minimum version is `34`.
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/sn-properties-config.png" alt="Configuration Settings" />
+<figcaption aria-hidden="true">Configuration Settings</figcaption>
+</figure>
+
+## Using the Application
+
+### How it works
+
+The ServiceNow application leverages Runbook Automation's Webhooks feature to trigger jobs in your environment. To create automation within ServiceNow please check out our Learning Article for [How to setup Webhooks to trigger your Runbook Automation Jobs](https://docs.rundeck.com/docs/learning/howto/using-webhooks.html).
+
+### Importing Webhooks
+
+The Scheduled Scripts module will list the Populate Webhooks Scheduled Script. This script can be used to import all available webhooks. By default it comes unscheduled. In order to keep your webhook listing current the script can be scheduled to run on a regular interval. (Be sure to mark as Active)
+
+### Calling Webhooks from ServiceNowÂ® Code
+
+Upon import webhooks from your Rundeck Projects will be added to the **PagerDuty Webhooks** table. A 'Code Example' field provides basic code that can be used in ServiceNowÂ® Client or Server side scripts to call that specific webhook.
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/sn-webhook-record.png" alt="Webhook Record" />
+<figcaption aria-hidden="true">Webhook Record</figcaption>
+</figure>
+
+<div class="language-javascript line-numbers-mode">
+
+``` javascript
+var rd = new Rundeck();
+rd.callWebhook('11','{}');
+```
+
+</div>
+
+The `callWebhook` function is part of a Server Include entry. The function takes two arguments to call a particular webhook.
+
+- ID value (e.g. "11")
+- An optional custom payload in JSON format "{}". (Note: if no payload is needed leave the two empty braces as shown in example code).
+
+### Examples
+
+Below is an example Incident table based UI Action script that includes the ticket number and hostname value from the associated CMDB CI.
+
+<div class="language-javascript line-numbers-mode">
+
+``` javascript
+try {
+    var rd = new Rundeck();
+    //Call Rundeck Webhook Server Include with ([webhook id], [payload])
+    rd.callWebhook('11', '{"ticket":"' + current.number + '", "host":"' + current.cmdb_ci.host_name + '"}');
+    action.setRedirectURL(current);
+} catch (e) {
+    gs.error(e);
+}
+```
+
+</div>
+
+## Additional Details
+
+### Helpful Info
+
+- Currently the application is only designed to connect to a single Rundeck instance.
+- The rights of the User API Key that is created will determine the access to Projects/Webhooks/Jobs that the application will have. It is recommended to use a service account for this and manage the appropriate rights through that account.
+
+### ServiceNowÂ® Roles included
+
+- executor: Assign this role to allow users to execute Rundeck actions. The role provides read-only access to the minimum necessary application components.
+- rundeck_app_user: Grants access to the Rundeck Automation module listing and allow read/write access to most application areas.

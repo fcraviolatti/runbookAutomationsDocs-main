@@ -1,0 +1,32 @@
+---
+title: "Logstore"
+source_url: https://docs.rundeck.com/docs/administration/cluster/logstore/
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Logstore
+
+Runbook Automation Self-Hosted Cluster instances must share the same logstore. Job execution output is stored locally to the Runbook Automation instance that ran the job but this output can be loaded into a common storage facility (eg, AWS S3, WebDAV, custom).
+
+With a configured logstore, the executing Runbook Automation instance copies the local output file to the logstore after job completion. If the standby Runbook Automation instance is activated, any request for that output log will cause the standby to retrieve it from the logstore and copy it locally for future access.
+
+Rundeck will make multiple attempts to store a log file if the logstore is unavailable.
+
+All Runbook Automation Cluster members must share the same log storage, this can be achieved in two ways:
+
+## Log storage plugin
+
+So far we have the following plugins for execution log storage:
+
+- [AWS S3](https://docs.rundeck.com/docs/administration/cluster/logstore/s3.html): This plugin works with any storage compatible with AWS S3 API, eg: S3, Minio, etc.
+- [Azure Blob Storage](https://docs.rundeck.com/docs/administration/cluster/logstore/azure.html)
+
+See [Logging Plugin Development](https://docs.rundeck.com/docs/developer/logging-plugins.html) to learn how to implement your own log storage.
+
+## Shared file system
+
+You can configure your Rundeck instances to share a file system using a NAS/SAN or NFS but those methods are typically less desirable or impossible in a cloud environment. Without a shared logstore, job output files would need to be synchronized across Rundecks via a tool like `rsync`.
+
+You can set the shared file system path with `framework.logs.dir` in the `framework.properties` file. This changes must be done in all the cluster members.

@@ -1,0 +1,146 @@
+---
+title: "Plugins Installed on Runners"
+source_url: https://docs.rundeck.com/docs/administration/runner/runner-plugins/runner-plugins.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Plugins Installed on Runners
+
+The following plugins are available in the next generation Runners:
+
+Node Executors
+
+File Copiers
+
+Node Steps
+
+Workflow Steps
+
+Node Source
+
+Key Storage
+
+Node Executors
+
+- local
+- sshj-ssh
+- ssh-exec
+- com.batix.rundeck.plugins.AnsibleNodeExecutor
+- WinRMPython
+- docker-container-node-executor
+- Kubernetes-node-executor
+
+File Copiers
+
+- ssh-copier
+- sshj-scp
+- com.batix.rundeck.plugins.AnsibleFileCopier
+- WinRMcpPython
+- docker-container-file-copier
+- Kubernetes-file-copier
+
+Node Steps
+
+- nixy-local-node-step
+- nixy-waitfor-dir-exists
+- nixy-waitfor-contains
+- nixy-waitfor-file-exists
+- nixy-waitfor-file-size
+- nixy-waitfor-http
+- nixy-waitfor-munin
+- nixy-waitfor-ping
+- nixy-waitfor-port-open
+- nixy-waitfor-sleep-workflow-node-step
+- nixy-waitfor-local-ping
+- nixy-waitfor-local-port-open
+- nixy-command-try-until
+- nixy-file-contains
+- nixy-file-dos2unix
+- nixy-file-exists
+- nixy-file-not-exists
+- nixy-file-rotate
+- nixy-file-truncate
+- com.batix.rundeck.plugins.AnsiblePlaybookInlineWorkflowNodeStep
+- com.batix.rundeck.plugins.AnsiblePlaybookWorflowNodeStep
+- edu.ohio.ais.rundeck.HttpWorkflowNodeStepPlugin
+- puppet-apply-step
+- azure-storage-cp-step
+- azure-storage-sync-step
+- azure-storage-ls-step
+- azure-storage-rm-step
+- aws-cli-s3-cp-step
+- aws-cli-s3-mv-step
+- aws-cli-s3-sync-step
+- aws-cli-s3-ls-step
+- aws-cli-s3-rm-step
+- aws-cli-s3-mb-step
+- aws-cli-s3-rb-step
+- docker-container-execute-command
+- docker-container-inspect-workflow-step
+- docker-container-pause-step
+- docker-container-unpause-step
+- docker-container-kill-step
+- docker-container-stats-step
+- docker-run-workflow-step
+- Kubernetes-Create-Deployment
+- Kubernetes-Update-Deployment
+- Kubernetes-Delete-Deployment
+- Kubernetes-Status-Deployment
+- Kubernetes-Wait-Deployment
+- Kubernetes-Wait-StatefulSet
+- Kubernetes-Create
+- Kubernetes-Delete
+- Kubernetes-Create-Service
+- Kubernetes-Update-Service
+- Kubernetes-Delete-Service
+- Kubernetes-Create-Job
+- Kubernetes-Delete-Job
+- Kubernetes-Run-Job
+- Kubernetes-Wait-Job
+- Kubernetes-Pods-Logs
+- Kubernetes-Create-Pod
+- Kubernetes-Delete-Pod
+- Kubernetes-Wait-Pod
+- Kubernetes-Execute-Step
+- Kubernetes-InlineScript-Step
+- SQLRunnerNodeStepPlugin
+- vmware-vm-powerops
+- script-file-command
+- filetransfer
+
+Workflow Steps
+
+- com.batix.rundeck.plugins.AnsiblePlaybookWorkflowStep
+- com.batix.rundeck.plugins.AnsiblePlaybookInlineWorkflowStep
+- com.batix.rundeck.plugins.AnsibleModuleWorkflowStep
+- nixy-local-workflow-step
+- nixy-waitfor-sleep-workflow-step
+- nixy-waitfor-sleep
+- WinRMCheck
+- github-script-step
+- vmware-vm-clone
+- vmware-vm-clone-template
+- vmware-vm-create
+- vmware-vm-customize
+- vmware-vm-reconfig
+
+Node Source
+
+- Ansible Inventory
+- VMware
+- Kubernetes Pods
+- Docker Containers
+- File Resource Model
+- Script Resource Model
+
+Key Storage
+
+- cyberark-storage
+- thycotic-storage
+- vault-storage
+
+> **Health Checks with Enterprise Runners**
+>
+> Health Checks are fully compatible with Enterprise Runners as of version 5.18.0. Health Checks will continue to work correctly when Runners are enabled and assigned to projects.

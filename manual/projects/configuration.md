@@ -1,0 +1,58 @@
+---
+title: "Project Configuration"
+source_url: https://docs.rundeck.com/docs/manual/projects/configuration.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Project Configuration
+
+## File Storage
+
+Configuration files for the project (previously stored on-disk) are stored in the database. (Since Rundeck 3.4).
+
+This includes the project configuration properties (aka `project.properties`), `readme.md` and `motd.md`. Additionally, some ACLs may be stored this way if the Enterprise ACL Storage feature is not used, or the ACL files cannot be used with it. (See [Rundeck 3.4 \> Enterprise ACL Storage Layer (Commercial)](https://docs.rundeck.com/docs/upgrading/upgrading-to-rundeck-3.4.html#enterprise-acl-storage-layer-enterprise))
+
+This uses the Rundeck **Storage Facility** to store the file contents, which can be configured to use an Encryption plugin. See [Storage Facility - Using Encryption](https://docs.rundeck.com/docs/administration/configuration/storage-facility.html#using-encryption).
+
+## Graphical Interface
+
+Under the Project Settings menu, select the "Edit Configuration" item. This page provides the same controls used when [creating a project](https://docs.rundeck.com/docs/manual/projects/project-create.html).
+
+Alternatively, you may might want to edit the raw configuration keys. Click the "Edit Configuration File" button to open a text editor letting you view and change all property keys.
+
+## CLI Usage
+
+The `rd projects configure set` command allows you to set configuration properties.
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+rd projects configure set -p MyProject -- \
+   --project.ssh-keypath":"/home/rundeck/.ssh/id_rsa
+```
+
+</div>
+
+## API Usage
+
+Project configuration can be achieved via the [API](https://docs.rundeck.com/docs/api/).
+
+[Project configuration](https://docs.rundeck.com/docs/api/#project-configuration)
+
+    PUT /api/13/project/MyProject/config
+    Content-Type: application/json
+
+    {
+        "project.ssh-keypath":"/home/rundeck/.ssh/id_rsa",
+        "resources.source.2.type":"directory",
+        "resources.source.2.config.directory":"/home/rundeck/projects/MyProject/resources.d"
+    }
+
+## Filesystem
+
+When using *filesystem* storage type, each Project has a configuration file called [project.properties](https://docs.rundeck.com/docs/administration/configuration/config-file-reference.html#project.properties), located at this path:
+
+- rpm/deb: /var/rundeck/projects/*project*/etc/project.properties
+- launcher: \$RDECK*BASE/projects/\_project*/etc/project.properties

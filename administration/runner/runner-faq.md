@@ -1,0 +1,29 @@
+---
+title: "FAQs"
+source_url: https://docs.rundeck.com/docs/administration/runner/runner-faq.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Enterprise Runner - Frequently Asked Questions
+
+## Does this replace Clustering?
+
+This feature is intended to be used in situations where execution of Node Steps is needed in a network segment or security zone that is different from the Cluster feature(s). An Automation Server Cluster still provides high-availability and fault tolerance for the User Interface, Job Management/Execution and system management tasks.
+
+## What plugins are available to run with the Enterprise Runners?
+
+Please review the [list of supported Remote Runner plugins.](https://docs.rundeck.com/docs/administration/runner/runner-plugins/runner-plugins.html)
+
+## Do Runners participate in node discovery?
+
+Not at this time. To dynamically update nodes use custom scripting and the APIs to update the node lists remotely.
+
+## Can multiple Runners run in parallel?
+
+Yes, multiple runners can be configured with the same tags. At this time only one Runner in the Runnerset with the same tags will execute tasks for a given job.
+
+## Does this work with Health Checks?
+
+Yes, Health Checks are fully compatible with Enterprise Runners as of version 5.18.0. Health Checks will continue to work correctly when Runners are enabled and assigned to projects.

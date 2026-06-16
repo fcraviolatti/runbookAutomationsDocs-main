@@ -1,0 +1,140 @@
+---
+title: "Using MySQL as a database backend"
+source_url: https://docs.rundeck.com/docs/administration/configuration/database/mysql.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Using MySQL as a database backend
+
+> **Warning**
+>
+> MySQL 5.6 is now End of Life. Rundeck will offer limited support on that version. The current recommendation is MySQL 8 for long term support.
+
+## Install MySQL
+
+Install MySQL using the installation guides [here](https://dev.mysql.com/doc/refman/8.0/en/installing.html)
+
+## Configure MySQL
+
+After install, run the [mysql_secure_installation script](https://dev.mysql.com/doc/refman/8.0/en/mysql-secure-installation.html). This will prompt to set the root password for mysql, as well as disable anonymous access.
+
+Set an appropriate [innodb_buffer_pool_size](https://dev.mysql.com/doc/refman/8.0/en/innodb-buffer-pool-resize.html). MySQL, like many databases, manages its own page cache and the buffer pool size determines how much RAM it can use! Setting this to 80% of the system memory is the common wisdom for dedicated servers, maybe even higher if the server has more than 32G of RAM.
+
+### MySQL 8.0
+
+This is the recommended version of MySQL for Rundeck.
+
+### MySQL 5.7
+
+MySQL 5.7 is in extended support but does not have the `utf8mb4` as a default character set. Some parts of Rundeck will not work without this.
+
+### MySQL 5.6
+
+MySQL 5.6 is End-of-Life and no longer fully supported as a backend. Rundeck strongly recommends upgrading in-use instances of MySQL 5.6 to version 8.
+
+## Setup Rundeck Database
+
+Next create a database and user access for the Rundeck server.
+
+Use the 'mysql' command line tool to access the db as the root user:
+
+    $ mysql -u root -p
+
+Enter the root password to connect. At the *mysql\>* prompt, enter the following commands to create the rundeck database:
+
+    mysql> create database rundeck;
+    Query OK, 1 row affected (0.00 sec)
+
+Next, create the MySQL user for the rundeck database:
+
+    mysql> create user 'rundeckuser'@'localhost' identified by 'rundeckpassword';
+    Query OK, 1 row affected (0.00 sec)
+
+Then "grant" access to the new user, and specify the hostname the Rundeck server will connect from. if it is the same server, use "localhost".
+
+    mysql> grant ALL on rundeck.* to 'rundeckuser'@'localhost';
+    Query OK, 1 row affected (0.00 sec)
+
+Exit the mysql prompt.
+
+Test access (if it's from localhost) by running:
+
+    $ mysql -u rundeckuser -p
+
+Verify the "rundeck" database is present using:
+
+<div class="language-sql line-numbers-mode">
+
+``` sql
+    mysql> show databases;
+    +--------------------+
+    | Database           |
+    +--------------------+
+    | information_schema |
+    | rundeck            |
+    +--------------------+
+    2 rows in set (0.00 sec)
+```
+
+</div>
+
+## Configuring Rundeck
+
+To configure Rundeck to connect to this DB.
+
+Locate and edit the `rundeck-config.properties` to configure the datasource:
+
+- RPM/Debian location: `/etc/rundeck/rundeck-config.properties`
+- Launcher location: `$RDECK_BASE/server/config/rundeck-config.properties`
+
+Contents:
+
+<div class="language-properties line-numbers-mode">
+
+``` properties
+dataSource.driverClassName = org.mariadb.jdbc.Driver
+dataSource.url = jdbc:mysql://myserver/rundeck?autoReconnect=true&useSSL=false
+dataSource.username = rundeckuser
+dataSource.password = rundeckpassword
+```
+
+</div>
+
+Start rundeck. If there is a startup error about database access, ensure that the hostname that the Mysql server sees from the client is the same one granted access in step X.
+
+NB: `myserver` , `rundeckuser` and `rundeckpassword` should be match the environment and mysql configuration. When Rundeck & MySQL-server are installed on one server, `myserver` is localhost. When Rundeck & MySQL-server are on different servers, `myserver` should be IP address or hostname of server which installed MySQL-server.
+
+NB: `autoReconnect=true` will fix a common problem where the Rundeck server's connection to Mysql is dropped after a period of inactivity, resulting in an error message: "Message: Can not read response from server. Expected to read 4 bytes, read 0 bytes before connection was unexpectedly lost."
+
+See more about [configuring the Mysql JDBC Connector/J URL](https://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html).
+
+## MySQL JDBC Driver
+
+This guide configures Rundeck to use the [MariaDB Connector/J driver](https://mariadb.com/kb/en/about-mariadb-connector-j/). It is compatible with MySQL and has a more permissive, LGPL, license.
+
+To use the Oracle MySQL driver download it and copy it to the `$RDECK_BASE/server/lib` for war launcher or in `/var/lib/rundeck/lib` (create it) for RPM and DEB installations.
+
+The driver can be obtained from the [MySQL Website](https://www.mysql.com/products/connector/), or directly from Maven:
+
+<div class="language-bash line-numbers-mode">
+
+``` bash
+MYSQLJ_VERS=8.0.21
+curl -L -o https://repo1.maven.org/maven2/mysql/mysql-connector-java/${MYSQLJ_VERS}/mysql-connector-java-${MYSQLJ_VERS}.jar
+```
+
+</div>
+
+## Amazon Aurora MySQL
+
+Runbook Automation supports the use of the [AWS Advanced JDBC Wrapper](https://github.com/aws/aws-advanced-jdbc-wrapper) for Amazon Aurora MySQL implementations.
+
+## Azure Database for MySQL - Flexible Server
+
+MySQL database services running MySQL version 8.0 and later, such as Azure Database for MySQL - Flexible Servers, will have the attribute [Generated invisible primary keys (GIPKs)](https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html#sysvar_sql_generate_invisible_primary_key) enabled by default in all Azure Database for MySQL - Flexible Server instances, as stated here: [Link](https://learn.microsoft.com/en-us/azure/mysql/flexible-server/concepts-limitations#:~:text=server%20parameters.-,Generated,-invisible%20primary%20keys), leading to potentially problems when used with Rundeck/Runbook Automation. For this service to be used with Rundeck, access the Azure Portal \> Server parameters \> Search for sql_generate_invisible_primary_key \> Change its value to OFF
+
+### Additional Articles
+
+Check out our [Migrating to MySQL from H2 article](https://docs.rundeck.com/learning/howto/migrate-to-mysql) in our Learning Section.

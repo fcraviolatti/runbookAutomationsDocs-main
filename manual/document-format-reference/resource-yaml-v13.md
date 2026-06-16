@@ -1,0 +1,200 @@
+---
+title: "RESOURCE-YAML"
+source_url: https://docs.rundeck.com/docs/manual/document-format-reference/resource-yaml-v13.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# RESOURCE-YAML
+
+Updated February 25, 2011
+
+# NAME
+
+resource-yaml-v13 - describes the Rundeck resource model document Yaml format
+
+The `resource` YAML document declares a resource model used by a Rundeck Project to define the set of Nodes that are available.
+
+See <http://yaml.org> for more information about YAML.
+
+## Structure
+
+The resource format supports two structures: either a Yaml Sequence of [Node definitions](#node-definition), or a Yaml Map of node names with [Node definitions](#node-definition) as values.
+
+Example:
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+- somenode: ...
+  ...
+- somenode2: ...
+```
+
+</div>
+
+OR
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+somenode:
+   hostname: ...
+   ...
+somenode2:
+   hostname: ...
+```
+
+</div>
+
+In the second case, the `nodename` entry is not required.
+
+## Node Definition
+
+A Node definition consists of a Map with some required and some optional entries.
+
+Required Entries:
+
+`nodename`  
+Name of the node, this must be a unique Identifier across nodes within a project
+
+`hostname`  
+Hostname of the node. This can be any IP Address or hostname to address the node. Since hostname is used to make SSH connections, it is possible to overload the value to include port number. (eg, hostname:port).
+
+`username`  
+User name to connect to the node via SSH.
+
+Optional Entries:
+
+`description`  
+A description of the Node
+
+`tags`  
+A literal with comma-separated tag strings, or a Sequence of literals. Tags are used for filtering nodes and often represent server role, environment, class, or group.
+
+`osFamily`  
+OS Family
+
+`osArch`  
+OS Architecture
+
+`osName`  
+OS Name
+
+`osVersion`  
+OS Version
+
+`editUrl`  
+URL to an external resource model service.
+
+`remoteUrl`  
+URL to an external resource model editor service.
+
+`ssh-key-storage-path`  
+The path to the SSH key in the Rundeck Key store. For example: keys/ec2/west.pem
+
+`node-executor`  
+The node executor plugin that you wish to use to issue commands to nodes (Script Execution, stub, openssh, etc.)
+
+`script-exec`  
+Specifies the system command to run
+
+`script-exec-dir`  
+Specifies the working directory for the execution
+
+`script-exec-shell`  
+Specifies the shell to use to interpret the command, e.g. "bash -c" or "cmd.exe /c"
+
+`file-copier`  
+The file copier you want to use to copy files to nodes (script execution, stub, openssh, etc.)
+
+`script-copy`  
+Specifies the system command to execute
+
+`script-copy-remote-filepath`  
+Specifies the full path of the copied file
+
+*Anything*  
+Specify any custom attributes about node using a string value.
+
+- For more information about using the `editUrl`/`remoteUrl` see the [Rundeck User Manual](https://docs.rundeck.com/docs/manual/projects/resource-model-sources/resource-editor.html#resource-editor).
+
+## Examples
+
+Here's a node, Venkman.local, described with several of the required and optional attributes discussed above.
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+Venkman.local:
+  description: Rundeck server node
+  hostname: Venkman.local
+  nodename: Venkman.local
+  osArch: x86_64
+  osFamily: unix
+  osName: Mac OS X
+  osVersion: 10.6.6
+  tags: ''
+  username: greg
+```
+
+</div>
+
+Tags are very useful for node filtering and can be used to describe the role, environment, group, or class to which a node belongs. The Homestar.local example below describes a node that plays the role of a redis server in the production environment.
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+Homestar.local:
+  description: The production redis server.
+  hostname: Homestar.local
+  nodename: Homestar.local
+  osArch: x86_64
+  osFamily: unix
+  osName: Linux
+  tags: 'redis_server,production'
+  username: greg
+```
+
+</div>
+
+Here's a node, bartholemew, that specifies some custom attributes (app-port, https-port):
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+bartholemew:
+  description: Webapp node
+  hostname: bartholemew
+  nodename: bartholemew
+  tags: 'web,app'
+  username: greg
+  app-port: 8080
+  https-port: 8443
+```
+
+</div>
+
+Here is the same two nodes but in the sequence style syntax:
+
+<div class="language-yaml line-numbers-mode">
+
+``` yaml
+- Homestar.local:
+  description: The production redis server.
+  hostname: Homestar.local
+  nodename: Homestar.local
+  tags: 'redis_server,production'
+  username: greg
+- bartholemew:
+  description: Webapp node
+  hostname: bartholemew
+  nodename: bartholemew
+  tags: 'web,app'
+  username: greg
+  app-port: 8080
+  https-port: 8443
+```
+
+</div>

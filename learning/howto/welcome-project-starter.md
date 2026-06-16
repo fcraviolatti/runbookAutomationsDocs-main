@@ -1,0 +1,194 @@
+---
+title: "Get the Welcome Project Up and Running"
+source_url: https://docs.rundeck.com/docs/learning/howto/welcome-project-starter.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# Get the Welcome Project Up and Running
+
+The Rundeck Welcome Projects are sample projects that show how to configure and use Rundeck. In this guide we show you how to set up, start and run the key parts of the Welcome Projects.
+
+There are two Welcome Projects, a Community Welcome Project focused on the Rundeck Open Source and a Welcome Project focused on Runbook Automation. Once you have the environment set up, you will want to follow the steps in the [Getting Started Tutorial](https://docs.rundeck.com/docs/learning/tutorial/).
+
+### Disclaimer
+
+The Welcome Projects are meant to show users how Rundeck works and are not designed to be used in production. Some of the setup/installation methods used in this environment are not recommended for production deployments. Do not run this environment for production purposes or with sensitive data. For installation best practices follow our documentation ([https://docs.rundeck.com/docs/](https://docs.rundeck.com/)) site and guidance from our world-class Support team.
+
+## Rundeck Basic Terminology
+
+Before starting, knowing basic Rundeck terminology is useful. All basic concepts are summarized [here](https://docs.rundeck.com/docs/learning/tutorial/terminology.html).
+
+### Pre-requisites
+
+- **Docker Desktop** - the open platform for developing, shipping, and running applications on containers, [find information on installing it on your operating system here](https://www.docker.com/products/docker-desktop).
+
+## Installing the Welcome Project
+
+To install the Welcome Project you need to download the latest release:
+
+Community Welcome Project
+
+Enterprise Welcome Project
+
+Community Welcome Project
+
+Navigate to: <https://github.com/rundeck/welcome-project-community>
+
+1.  Click on the â€œlatestâ€? release in the right,
+2.  Download the Source Code (.zip) file.
+3.  Extract the contents to a folder on your local hard drive.
+
+Enterprise Welcome Project
+
+Navigate to: <https://github.com/rundeckpro/welcome-project>
+
+1.  Click on the â€œlatestâ€? release in the right,
+2.  Download the Source Code (.zip) file.
+3.  Extract the contents to a folder on your local hard drive.
+
+*WARNING*: A license is required for the Runbook Automation Welcome Project. A Runbook Automation Trial license can be requested from here <https://www.rundeck.com/see-demo>.
+
+## Building the Environment
+
+Use your terminal program and navigate to the directory where the Source Code was extracted.
+
+From the command line, build the docker base images.
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker-compose build
+```
+
+</div>
+
+The initial build can take a few minutes.
+
+**NOTE:** Building is not mandatory the first time. Use 'build' to update the images used to the latest version.
+
+## Starting the Environment
+
+Start the environment with the following command. Running this command starts all the container components in the background and leaves them running.
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker-compose up -d
+```
+
+</div>
+
+This process can take some time. To check if Rundeck is ready to use, follow the logs using the commands in the next section.
+
+## Monitoring Rundeck
+
+If you want to see Rundeck logs in real-time, open a new terminal window and execute the following command:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker logs -f rundeck
+```
+
+</div>
+
+> Alternatively leave off the `-d` from the `docker-compose up` command above and all the logs will be printed on screen.
+
+## Accessing Welcome Project (note the images are for the Enterprise Welcome Project)
+
+To access Rundeck, head to <http://localhost:4440> in your web browser.
+
+Log in using the following credentials: username: `admin` and password: `admin`
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/login-page.png" alt="Login Page" />
+<figcaption aria-hidden="true">Login Page</figcaption>
+</figure>
+
+## Navigating Welcome Project
+
+After logging in, you will see the following screen:
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/howto-project-list.png" alt="alt_text" />
+<figcaption aria-hidden="true">alt_text</figcaption>
+</figure>
+
+Click the project name.
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/howto-welcome-project-dashboard.png" alt="alt_text" />
+<figcaption aria-hidden="true">alt_text</figcaption>
+</figure>
+
+In the left nav bar the options available are:
+
+- Dashboard, to view the project description, Readme, and executions summary. Runbook Automation users may see additional visualizations for schedules and execution history.
+- Jobs, the welcome project available jobs.
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/howto-welcome-joblist.png" alt="alt_text" />
+<figcaption aria-hidden="true">alt_text</figcaption>
+</figure>
+
+- Nodes: where rundeck displays all nodes
+- Commands: dispatch individual commands to available nodes
+- Activity: see all job executions
+- Webhooks: define and view all Rundeck webhooks
+- Schedule (Enterprise-exclusive): define and see specific schedules for jobs
+- More:
+  - Calendars (Enterprise-exclusive): define and see specific calendars for jobs
+  - Health Checks (Enterprise-exclusive): define the nodeâ€™s health checks
+  - Tour Manager (Enterprise-exclusive): define and see the Rundeck guided tours
+- Project Settings
+  - Edit Configuration: all current project configurations
+  - Key Storage: where Rundeck stores keys and passwords
+  - Edit Nodes: define and configure Rundeck node sources
+  - Access Control: define Project-specific ACL rules
+  - Edit Readme: define the readme project content
+  - Edit Message of the Day: craft the Project â€œmessage of the dayâ€?
+  - Setup SCM: Setup the Source Control Manager
+  - Export Archive: export a Project's database contents into an archive file
+  - Import Archive: import the contents of an exported archive
+  - Delete Project: delete the current project
+  - Plugins Control (Enterprise-exclusive): enable or disable installed plugins
+
+## Familiarize Yourself with Rundeck!
+
+Once your environment is fully operational, [start the Tutorial here](https://docs.rundeck.com/docs/learning/tutorial/).
+
+## Stop the Environment
+
+Use the following command to stop the system, but keep the work you've done so far:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker-compose stop
+```
+
+</div>
+
+To remove the containers that were built and free up space on your machine:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker-compose down
+```
+
+</div>
+
+## Cleaning up the Environment
+
+This command will remove all associated volumes and images as well.
+
+<div class="language-text line-numbers-mode">
+
+``` text
+docker-compose down --volume --rmi all
+```
+
+</div>

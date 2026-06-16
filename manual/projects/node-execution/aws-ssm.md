@@ -1,0 +1,361 @@
+---
+title: "AWS Systems Manager (SSM) Node Executor Plugins"
+source_url: https://docs.rundeck.com/docs/manual/projects/node-execution/aws-ssm.html
+product: Runbook Automation Self-Hosted
+version: 5.20.1
+fetched: 2026-06-12
+---
+
+# AWS Systems Manager (SSM) Node Executor Plugins
+
+> **Available in PagerDuty Runbook Automation Commercial products.**
+
+## Overview
+
+The Node Executor and File Copier plugins use [AWS Systems Manager](https://aws.amazon.com/systems-manager/) to send commands, files and scripts to remote nodes.
+
+Using the SSM plugins allows for Runbook Automation to communicate with EC2 instances through the SSM service, rather than another communication protocol - such as SSH. Runbook Automation sends commands to the Systems Manager service, and then the Systems Manager agents *pull* their tasks onto their host EC2s. In addition, S3 is used to pass scripts and files to remote nodes.
+
+<figure>
+<img src="https://docs.rundeck.com/docs/assets/img/ssm-node-executor-architecture.png" alt="Basic Architecture of Runbook Automation with SSM" />
+<figcaption aria-hidden="true">Basic Architecture of Runbook Automation with SSM</figcaption>
+</figure>
+
+## Configuration and Credential Settings
+
+There are three components of the setup for using SSM with Runbook Automation:
+
+1.  SSM and IAM setup on the remote EC2 nodes.
+2.  IAM permissions for Runbook Automation.
+3.  S3 Bucket setup. Required for executing scripts and sending files to EC2s, but not required for sending individual commands.
+
+### SSM Setup on Remote EC2 Nodes
+
+1.  Ensure the SSM Agent is running on remote EC2 instances. This can be done following [this AWS documentation](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent-status-and-restart.html).
+
+2.  Associate an IAM role with the remote EC2 instances that allows for the SSM agent to retrieve tasks from the SSM service.
+
+    - AWS provides a prebuilt policy: **AmazonSSMManagedInstanceCore** that provides the necessary permissions for this operation.
+
+    > **Heads Up!**
+    >
+    > In order to send scripts and files to EC2 instances, the SSM agents also need to be able to retrieve objects from S3. Be sure to add the **`s3:GetObject`** and **`s3:ListObject`** permissions to the remote EC2s IAM role as well.
+    >
+    > <div class="language-text line-numbers-mode">
+    >
+    > ``` text
+    >    {  
+    >        "Version": "2012-10-17",
+    >        "Statement": [
+    >            {
+    >                "Effect": "Allow",
+    >                "Action": [
+    >                    "s3:GetObject",
+    >                    "s3:ListBucket"
+    >                ],
+    >                "Resource": "arn:aws:s3:::<<YOUR S3 BUCKET>>/*"
+    >            }
+    >        ]
+    >    }
+    > ```
+    >
+    > </div>
+
+3.  Add the instances to the SSM inventory. This can be done using the [Quick Setup Host Management](https://docs.aws.amazon.com/systems-manager/latest/userguide/quick-setup-host-management.html).
+
+4.  You can test that you have configured Systems Manager correctly by manually using the [Run Command](https://docs.aws.amazon.com/systems-manager/latest/userguide/run-command.html) feature from AWS:  
+    ![aws-ssm-test-run](https://docs.rundeck.com/docs/assets/img/aws-ssm-test-run-command.png)  
+    - Use the **`AWS-RunShellScript`** or **`AWS-RunPowerShellScript`** (for Windows) to test that SSM has been set up properly for the remote EC2 nodes.  
+      ![aws-ssm-test-script](https://docs.rundeck.com/docs/assets/img/aws-ssm-test-run-script.png)  
+
+Additional documentation on this setup can be found in the [Setting up AWS Systems Manager for EC2 instances](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-setting-up-ec2.html).
+
+### IAM Permissions Setup for Runbook Automation
+
+In order for Runbook Automation to communicate with remote EC2 instances using SSM, it needs to have permissions to send commands to the SSM service. Amazon provides a prebuilt IAM Policy, **AmazonSSMAutomationRole** that can be used for providing the SSM permissions to Runbook Automation's IAM Role. However, it is recommended to **only use this role for testing** as it has fairly broad permissions.
+
+Here are steps to use a more secure permissions set:
+
+1.  Create a new IAM Policy with the following permissions:
+
+    > **Heads Up!**
+    >
+    > Be sure to replace **`<<your AWS account ID>>`** with the Account ID where the remote EC2 instances reside.
+
+    <div class="language-text line-numbers-mode">
+
+    ``` text
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "VisualEditor0",
+                "Effect": "Allow",
+                "Action": "ssm:SendCommand",
+                "Resource": [
+                    "arn:aws:s3:::*",
+                    "arn:aws:ssm:*::document/AWS-RunShellScript",
+                    "arn:aws:ssm:*::document/AWS-RunPowerShellScript",
+                    "arn:aws:ssm:*::document/AWS-RunRemoteScript",
+                    "arn:aws:ec2:*:<<your AWS account ID>>:instance/*"
+                ]
+            },
+            {
+                "Sid": "VisualEditor1",
+                "Effect": "Allow",
+                "Action": [
+                    "ssm:ListCommands",
+                    "ssm:ListCommandInvocations",
+                    "ssm:GetCommandInvocation",
+                    "logs:GetLogEvents"
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
+    ```
+
+    </div>
+
+2.  Attach this policy with the IAM Role that is associated with Runbook Automation. If Runbook Automation is hosted on EC2, then follow [these steps](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#attach-iam-role) to modify the IAM Role of an EC2. If hosted on ECS, then follow [these steps](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html#specify-task-iam-roles).
+
+    > **IAM Role for ECS**
+    >
+    > If running Runbook Automation on ECS, then this IAM Policy needs to be attached to the **Task Role**, *not* the *Task Execution Role*. :::
+
+### S3 Bucket Permissions
+
+In order for scripts and files to be picked up by the SSM agents on the remote nodes, the files are (temporarily) passed through an S3 bucket.
+
+1.  Create an S3 bucket that has a bucket policy that allows for objects to be *uploaded* to it by the IAM policy associated with Runbook Automation.
+
+2.  Include a permission statement in this policy that allows for the remote EC2 instances to *retrieve* objects from the bucket.
+
+3.  Here is an example policy:
+
+    > **Heads Up!**
+    >
+    > Be sure to replace **`<< content >>`** with your AWS Account ID's and ARN's.
+
+    <div class="language-text line-numbers-mode">
+
+    ``` text
+    {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Effect": "Allow",
+               "Principal": {
+                   "AWS": "arn:aws:iam::<<remote EC2 nodes AWS account ID>>:role/<<ARN associated with remote EC2s>>"
+               },
+               "Action": [
+                   "s3:GetObject",
+                   "s3:ListBucket"
+               ],
+               "Resource": "arn:aws:s3:::automated-diagnostics/*"
+           },
+           {
+               "Effect": "Allow",
+               "Principal": {
+                   "AWS": "arn:aws:iam::<<Runbook Automation AWS account ID>>:role/<<ARN associated with Runbook Automation>>"
+               },
+               "Action": [
+                   "s3:PutObject"
+               ],
+               "Resource": "arn:aws:s3:::automated-diagnostics/*"
+           }
+       ]
+    }
+    ```
+
+    </div>
+
+> **Tip!**
+>
+> You can test that the S3 permissions have been set up correctly by executing a simple script on the remote EC2s through the Systems Manager interface. Follow the instructions outlined in [this AWS documentation](https://docs.aws.amazon.com/systems-manager/latest/userguide/integration-s3.html) to set up and run the test.
+
+## Setup Within Runbook Automation
+
+### AWS Authentication
+
+Follow the instructions outlined in the [AWS Plugins Overview](https://docs.rundeck.com/docs/manual/plugins/aws-plugins-overview.html) for Runbook Automation to authenticate with AWS.
+
+### Node Discovery
+
+In order to target the remote EC2 instances, they need to be populated into Runbook Automation's node inventory. It is recommended to use the [**EC2 Node Source**](https://docs.rundeck.com/docs/manual/projects/resource-model-sources/aws.html#amazon-ec2-node-source).
+
+> **When not using the EC2 Node Source**
+>
+> If the EC2 Node Source is not used for node discovery, then be sure that the following **node-attributes** are added to the nodes:
+>
+> 1.  **`instanceId`** - This is the EC2 instance-id from AWS.
+> 2.  **`region`** - This is the AWS region where the EC2 resides.
+>
+> Node Attributes can be added when defining a resource-model source [manually](https://docs.rundeck.com/docs/administration/configuration/plugins/bundled-plugins.html#built-in-resource-model-formats) or by using the [Attribute Match](https://docs.rundeck.com/docs/manual/node-enhancers.html#attribute-match) node enhancer.
+
+### Enable SSM Node Executor
+
+**Project Wide Setting**  
+The SSM Node Executor can be set as the **Default Node Executor** - thereby making it the standard node executor for the whole project:
+
+1.  Navigate to **Project Settings** -\> **Edit Configuration** -\> **Default Node Executor**.
+2.  Select the dropdown on the left and select **AWS / SSM / Node Executor**: ![](https://docs.rundeck.com/docs/assets/img/ssm-select-default-node-executor.png)
+3.  If Runbook Automation is authenticated with AWS through an associated IAM Role, then all the fields can be left as their defaults. Otherwise, fill in the **Access Key ID** and **Secret Key** fields.
+4.  See below for using **CloudWatch Logs** for larger log-output.
+5.  Optionally modify the **Log Filter Delay** property to be the number of seconds to wait before retrieving logs.  
+      
+
+**Individual Nodes and Node Sources Setting**  
+The SSM Node Executor can alternatively be configured on a per **Node Source** or per node basis.  
+To do so, add **`node-executor=awsssmexecutor`** as a node-attribute to the nodes.
+
+- For the **EC2 Node Source**, this can be done using the **Mapping Params** field:  
+  **`node-executor.default=awsssmexecutor`** and **`file-copier.default=aws-ssm-copier`**![ec2-mapping-params](https://docs.rundeck.com/docs/assets/img/aws-ssm-ec2-mapping-params.png)
+
+### Enable SSM File Copier
+
+The SSM File Copier is used to execute scripts and transfer files to EC2 instances. Similar to the SSM Node Executor, it can be configured for an entire project or on per Node Source basis.
+
+**Project Wide Setting**  
+The SSM File Copier can be set as the **Default File Copier** - thereby making it the standard File Copier for the whole project:
+
+1.  Navigate to **Project Settings** -\> **Edit Configuration** -\> **Default File Copier**.
+2.  Select the dropdown on the left and select **AWS / SSM / File Copier**.
+3.  Place the name of the S3 bucket into the **Bucket Name** field.
+4.  If Runbook Automation is authenticated with AWS through an associated IAM Role, then the credential fields can be left blank. Otherwise, fill in the **Access Key ID** and **Secret Key** fields.
+
+**Individual Nodes and Node Sources Setting**  
+The SSM File Copier can alternatively be configured on a per **Node Source** or per node basis. To do so, add **`file-copier=aws-ssm-copier`** and **`ssm-copier-bucket=S3 bucket name`** as a node-attribute to the nodes.
+
+## Using SSM for Commands and Scripts
+
+Once the setup is complete, commands that are executed on the specified EC2s - either through the [**Commands**](https://docs.rundeck.com/docs/manual/06-commands.html#commands-tab-overview) tab or through the **Remote Command** step - will automatically execute through SSM. Similarly, scripts that are executed using the **Inline Script** Job step will take place using SSM with S3 as the pass-through mechanism.
+
+### Execution Timeout Configuration
+
+AWS SSM has a default execution timeout of 1 hour (3600 seconds). You can configure a custom timeout value using the **`ssm-execution-timeout`** property to allow longer-running commands and scripts.
+
+#### Maximum Timeout Limits
+
+The maximum execution timeout depends on your authentication method and execution type:
+
+- **With Assume Role**: Up to **12 hours (43200 seconds)**
+
+  - Applies when using cross-account access with IAM role assumption
+  - Limited by AWS IAM temporary credentials duration
+
+- **Without Assume Role**: Up to **48 hours (172800 seconds)**
+
+  - Applies when using direct IAM role attachment or access keys
+  - Suitable for very long-running operations
+
+- **Inline Scripts (Runbook Automation/RBA and Runbook Automation Self-Hosted/RBA-SH)**: Maximum **8 hours (28800 seconds)**
+
+  - This limit applies specifically to inline script steps in both Runbook Automation (RBA) and Runbook Automation Self-Hosted (RBA-SH)
+  - Applies regardless of assume role usage
+
+> **Important**
+>
+> Ensure your IAM policies and AWS service limits support your configured timeout duration. For assume role configurations, verify the maximum session duration is set appropriately in the IAM role settings.
+
+> **Best Practice: Timeout Configuration**
+>
+> Configure your `ssm-execution-timeout` to be **longer than your expected job duration**, with a safety margin of a few minutes. For example, if your job typically runs for 2 hours, set the timeout to 2 hours and 5-10 minutes (7500-7800 seconds) to ensure the job completes successfully without timing out. This buffer accounts for variable execution times and system delays.
+
+#### Configuration Methods
+
+**1. Project-wide Configuration (Default Node Executor)**
+
+1.  Navigate to **Project Settings** -\> **Edit Configuration** -\> **Default Node Executor**.
+2.  Select **AWS / SSM / Node Executor**
+3.  Set the **Execution Timeout** value in seconds (e.g., 7200 for 2 hours)
+
+**2. Node Source Level (EC2 Node Source)**
+
+Using the **Mapping Params** field:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+ssm-execution-timeout.default=7200
+```
+
+</div>
+
+(Example: 2 hours = 7200 seconds)
+
+**3. Project Configuration File**
+
+Add to your project configuration file:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+project.ssm-execution-timeout=7200
+```
+
+</div>
+
+**4. Node Level (Individual Nodes)**
+
+Using the [Attribute Match](https://docs.rundeck.com/docs/manual/node-enhancers.html#attribute-match) node enhancer, add as a node-attribute:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+ssm-execution-timeout=7200
+```
+
+</div>
+
+#### Default Value
+
+If not specified, the execution timeout defaults to **3600 seconds (1 hour)**.
+
+## Using CloudWatch Logs (Optional)
+
+The example policies in the prior sections enable Runbook Automation to retrieve logs directly from SSM.  
+However, these logs are truncated to 48,000 characters. To view logs that are longer than this limit, CloudWatch logs are used.
+
+### SSM Agent Permissions for Cloudwatch
+
+In order for the log output to be sent to CloudWatch, the SSM agents on the remote EC2 instances need permissions to communicate with CloudWatch.
+
+Add the following IAM permissions to the IAM Role that is associated with the remote EC2 instances:
+
+<div class="language-text line-numbers-mode">
+
+``` text
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "logs:DescribeLogGroups",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogStreams",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+</div>
+
+Next, add the following permissions to the IAM Role that is associated with Runbook Automation: **`logs.GetLogEvents`**.
+
+### Enable CloudWatch Configuring in Runbook Automation
+
+To use Cloudwatch logs for all SSM output across all nodes that use SSM within the project, specify the **CloudWatch Log Group** in the Node Executor. Alternatively, add the following to the **Mapping Params** **`cloudwatch-log-group.default=<<CloudWatch Log Group Name>>`** on the node source or with **`cloudwatch-log-group=<<CloudWatch Log Group Name>>`** as a node-attribute.
+
+## See it in Action
+
+This plugin is used in one of the prebuilt Jobs in our [***Automated Diagnostics Solution***](https://docs.rundeck.com/docs/learning/solutions/automated-diagnostics/). Try out the Solution to see how this plugin can be used as part of incident-response workflows.
